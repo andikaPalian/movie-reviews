@@ -7,28 +7,28 @@ const auth = async (req, res, next) => {
         const authHeader = req.headers.authorization || req.headers.Authorization;
         if (authHeader && authHeader.startsWith("Bearer")) {
             token = authHeader.split(" ")[1];
-            if (!token) {
-                return res.status(401).json({
-                    message: "User is not authorized or token is missing"
-                });
-            }
+            jwt.verify(token, process.env.JWT_SECRET, async (err, decoded) => {
+                if (err) {
+                    return res.status(401).json({
+                        message: "User is not authorized"
+                    });
+                }
 
-            const user = await User.findById(decoded.user?.id || decoded.id);
-            if (!user) {
-                return res.status(401).json({
-                    message: "User not found"
-                });
-            }
+                const user = await User.findById(decoded.user?.id || decoded.id);
+                if (!user) {
+                    return res.status(404).json({
+                        message: "User not found"
+                    });
+                }
 
-            req.user = {
-                userId: user._id,
-                name: user.name,
-                email: user.email
-            };
-            
-            next();
+                req.user = {
+                    userId: user._id,
+                    name: user.name,
+                    email: user.email,
+                }
+            });
         } else {
-            return res.status(401).json({
+            return res.status(403).json({
                 message: "Token is missing or not provided"
             });
         }
