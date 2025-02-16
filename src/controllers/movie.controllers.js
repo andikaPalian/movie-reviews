@@ -9,7 +9,7 @@ import { v2 as cloudinary } from 'cloudinary';
 const addMovies = async (req, res) => {
     try {
         const adminId = req.admin.adminId;
-        const { title, description, genre, director, cast, release_year, rating, poster } = req.body;
+        const { title, description, genre, director, cast, release_year, rating} = req.body;
 
         const admin = await Admin.findById(adminId);
         if (!admin) {
@@ -18,7 +18,7 @@ const addMovies = async (req, res) => {
             });
         }
 
-        if (!title?.trim() || !description?.trim() || !genre?.trim() || !director?.trim() || !cast?.trim() || !release_year?.trim() || !rating?.trim() || !poster?.trim()) {
+        if (!title?.trim() || !description?.trim() || !genre?.trim() || !director?.trim() || !cast?.trim() || !release_year?.trim() || !rating?.trim()) {
             return res.status(400).json({
                 message: "Please fill all the required fields"
             });
@@ -37,10 +37,18 @@ const addMovies = async (req, res) => {
         }
 
         const validGenres = ["Action", "Adventure", "Comedy", "Drama", "Fantasy", "Horror", "Mystery", "Romance", "Thriller", "Sci-Fi"];
-        if (!validGenres.includes(genre)) {
-            return res.status(400).json({
-                message: "Invalid genre. Genre must be one of the following: Action, Adventure, Comedy, Drama, Fantasy, Horror, Mystery, Romance, Thriller, Sci-Fi"
-            });
+        if (Array.isArray(genre)) {
+            if (!genre.every(genre => validGenres.includes(genre))) {
+                return res.status(400).json({
+                    message: `Invalid genre. Allowed genre are ${validGenres.join(", ")}`
+                });
+            }
+        } else {
+            if (!validGenres.includes(genre)) {
+                return res.status(400).json({
+                    message: `Invalid genre. Allowed genre are ${validGenres.join(", ")}`
+                });
+            }
         }
 
         if (typeof director !== "string" || !validator.isLength(director, {min: 1, max: 100})) {
@@ -49,27 +57,39 @@ const addMovies = async (req, res) => {
             });
         }
 
-        if (!Array.isArray(cast) || cast.length === 0) {
-            return res.status(400).json({
-                message: "Cast must be an array and must contain at least one actor"
+        let parsedCast;
+        try {
+            // Jika cast berupa string, lakukan parsing
+            if (typeof cast === "string") {
+                parsedCast = JSON.parse(cast);
+            } else if (Array.isArray(cast)) {
+                // Jika cast berupa array, langsung gunakan
+                parsedCast = cast;
+            } else {
+                // Jika cast bukan string atau array, kembalikan error
+                return res.status(400).json({
+                    message: "Invalid cast format",
+                    error: "cast must be a string or an array of strings"
+                });
+            }
+        } catch (error) {
+            console.error("Error parsing cast:", error);
+            return res.status(500).json({
+                message: "Internal server error",
+                error: "Failed to parse cast"
             });
         }
 
-        if (!cast.every(actor => typeof actor === "string" && actor.trim() !== "")) {
+        if (!validator.isInt(release_year.toString(), { min: 1900, max: new Date().getFullYear() })) {
             return res.status(400).json({
-                message: "Every actor in the cast must be a string and must not be empty"
+                message: "Release year must be a number and between 1900 and the current year"
             });
         }
+        
 
-        if (typeof release_year !== "number" || !validator.isInt(release_year.toString(), {min: 1900, max: new Date().getFullYear()})) {
+        if (!validator.isFloat(rating.toString(), { min: 0, max: 10 })) {
             return res.status(400).json({
-                message: "Release year must be a number and must be between 1900 and the current year"
-            });
-        }
-
-        if (typeof rating !== "number" || !validator.isFloat(rating.toString(), {min: 0, max: 10})) {
-            return res.status(400).json({
-                message: "Rating must be a number and must be between 0 and 10"
+                message: "Rating must be a float number and between 0 and 10"
             });
         }
 
@@ -121,6 +141,14 @@ const addMovies = async (req, res) => {
             message: "Internal server error",
             error: error.message || "An unexpected error occurred"
         });
+    }
+}
+
+const editMovies = async (req, res) => {
+    try {
+        
+    } catch (error) {
+        
     }
 }
 
