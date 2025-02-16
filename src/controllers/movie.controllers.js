@@ -1,10 +1,9 @@
 import Movie from "../models/movies.models.js";
-import Reviews from "../models/reviews.models.js";
-import User from "../models/user.models.js";
 import Admin from "../models/admin.models.js";
 import validator from "validator";
 import fs from "fs/promises";
 import { v2 as cloudinary } from 'cloudinary';
+import mongoose from "mongoose";
 
 const addMovies = async (req, res) => {
     try {
@@ -146,10 +145,152 @@ const addMovies = async (req, res) => {
 
 const editMovies = async (req, res) => {
     try {
-        
+        const adminId = req.admin.adminId;
+        const {movieId} = req.params;
+        const updateData = req.body;
+
+        const admin = await Admin.findById(adminId);
+        if (!admin) {
+            return res.status(404).json({
+                message: "Admin not found"
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(movieId)) {
+            return res.status(400).json({
+                message: "Invalid movie ID"
+            });
+        }
+
+        const allowedFields = ["title", "description", "genre", "director", "cast", "release_year", "rating"];
+        const data = {};
+        for (const [key, value] of Object.entries(updateData)) {
+            if (allowedFields.includes(key)) {
+                data[key] = value;
+            } else if (key === "cast" && Array.isArray(value)) {
+                data[key] = value;
+            } else if (key === "poster") {
+                data.poster = value;
+            } else {
+                return res.status(400).json({
+                    message: "Invalid update fields",
+                    error: `Only the following fields are allowed to be updated: ${allowedFields.join(", ")}`
+                });
+            }
+        }
+
+        const movie = await Movie.findById(movieId);
+        if (!movie) {
+            return res.status(404).json({
+                message: "Movie not found"
+            });
+        }
+
+        if (req.file) {
+            if (movie.cloudinary_id) {
+                await cloudinary.uploader.destroy(movie.cloudinary_id);
+            }
+
+            const result = await cloudinary.uploader.upload(req.file.path, {
+                use_filename: true,
+                unique_filename: true,
+            });
+
+            await fs.unlink(req.file.path);
+
+            data.poster = result.secure_url;
+            data.cloudinary_id = result.public_id;
+        }
+
+        const updateMovie = await Movie.findByIdAndUpdate(
+            movieId,
+            {
+                $set: data
+            },
+            {
+                new: true
+            }
+        );
+        if (!updateMovie) {
+            return res.status(404).json({
+                message: "Movie not found or already deleted"
+            });
+        }
+
+        res.status(200).json({
+            message: "Movie updated successfully",
+            movie: {
+                id: updateMovie._id,
+                title: updateMovie.title,
+                description: updateMovie.description,
+                genre: updateMovie.genre,
+                director: updateMovie.director,
+                cast: updateMovie.cast,
+                release_year: updateMovie.release_year,
+                rating: updateMovie.rating,
+                poster: updateMovie.poster,
+                reviews: updateMovie.reviews,
+                cloudinary_id: updateMovie.cloudinary_id
+            }
+        });
+    } catch (error) {
+        console.error("Error during edit movies:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message || "An unexpected error occurred"
+        });
+    }
+}
+
+const deleteMovies = async (req, res) => {
+    try {
+        const adminId = req.admin.adminId;
+        const {movieId} = req.params;
+
+        const admin = await Admin.findById(adminId);
+        if (!admin) {
+            return res.status(404).json({
+                message: "Admin not found"
+            });
+        }
+
+        if (!mongoose.Types.ObjectId.isValid(movieId)) {
+            return res.status(400).json({
+                message: "Invalid movie ID"
+            });
+        }
+
+        const movie = await Movie.findById(movieId);
+        if (!movie) {
+            return res.status(404).json({
+                message: "Movie not found"
+            });
+        }
+
+        if (movie.cloudinary_id) {
+            await cloudinary.uploader.destroy(movie.cloudinary_id);
+        }
+
+        await Movie.findByIdAndDelete(movieId);
+
+        res.status(200).json({
+            message: "Movie deleted successfully"
+        });
+    } catch (error) {
+        console.error("Error during delete movies:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message || "An unexpected error occurred"
+        });
+    }
+}
+
+const listMovies = async (req, res) => {
+    try {
+        const {search, genre, page = 1, limit = 10} = req.query;
     } catch (error) {
         
     }
 }
 
-export {addMovies};
+export {addMovies, editMovies, deleteMovies};

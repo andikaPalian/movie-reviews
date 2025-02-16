@@ -1,10 +1,13 @@
 import express from 'express';
 import { adminValidation, hashRole } from '../middlewares/adminValidation.js';
-import { addMovies } from '../controllers/movie.controllers.js';
+import { addMovies, deleteMovies, editMovies } from '../controllers/movie.controllers.js';
 import upload from '../middlewares/multer.js';
 
 const movieRouter = express.Router();
 
+// Admin routes
 movieRouter.post("/add", adminValidation, hashRole(["super_admin", "movie_admin"]), upload.single("poster"), addMovies);
+movieRouter.patch("/edit/:movieId", adminValidation, hashRole(["super_admin", "movie_admin"]), upload.single("poster"), editMovies);
+movieRouter.delete("/delete/:movieId", adminValidation, hashRole(["super_admin", "movie_admin"]), deleteMovies);
 
 export default movieRouter;
