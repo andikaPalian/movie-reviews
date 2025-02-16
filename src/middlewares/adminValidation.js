@@ -23,7 +23,7 @@ const adminValidation = async (req, res, next) => {
                     adminId: admin._id,
                     name: admin.name,
                     email: admin.email,
-                    role: admin.admin_role
+                    admin_role: admin.admin_role
                 };
                 next();
             });
