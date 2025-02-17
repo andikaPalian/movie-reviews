@@ -288,9 +288,100 @@ const deleteMovies = async (req, res) => {
 const listMovies = async (req, res) => {
     try {
         const {search, genre, page = 1, limit = 10} = req.query;
+        const pageNum = Number(page);
+        const limitNum = Number(limit);
+        const skip = (pageNum - 1) * limitNum;
+        const query = {};
+
+        const validGenres = [
+            "Action",
+            "Adventure",
+            "Comedy",
+            "Drama",
+            "Fantasy",
+            "Horror",
+            "Mystery",
+            "Romance",
+            "Sci-Fi",
+            "Thriller",
+            "Western"
+        ];
+
+        if (search) {
+            query.$or = [
+                {
+                    title: {
+                        $regex: search,
+                        $options: "i"
+                    }
+                },
+                {
+                    description: {
+                        $regex: search,
+                        $options: "i"
+                    }
+                },
+                {
+                    genre: {
+                        $regex: search,
+                        $options: "i"
+                    }
+                },
+                {
+                    director: {
+                        $regex: search,
+                        $options: "i"
+                    }
+                },
+                {
+                    cast: {
+                        $regex: search,
+                        $options: "i"
+                    }
+                }
+            ];
+        }
+
+        if (genre && validGenres.includes(genre)) {
+            query.genre = genre;
+        }
+
+        const movies = await Movie.find(query).skip(skip).limit(limitNum);
+        if (!movies || movies.length === 0) {
+            return res.status(404).json({
+                message: "No movies found"
+            });
+        }
+        const totalMovies = await Movie.countDocuments(query);
+
+        res.status(200).json({
+            message: "Movies retrieved successfully",
+            movies: {
+                totalMovies: totalMovies,
+                totalPages: Math.ceil(totalMovies / limitNum),
+                currentPage: pageNum,
+                movies: movies.map(movie => ({
+                    id: movie._id,
+                    title: movie.title,
+                    description: movie.description,
+                    genre: movie.genre,
+                    director: movie.director,
+                    cast: movie.cast,
+                    release_year: movie.release_year,
+                    rating: movie.rating,
+                    poster: movie.poster,
+                    reviews: movie.reviews,
+                    cloudinary_id: movie.cloudinary_id
+                }))
+            }
+        });
     } catch (error) {
-        
+        console.log("Error during getting movies list:", error);
+        return res.status(500).json({
+            message: "Internal server error",
+            error: error.message || "An unexpected error occurred"
+        });
     }
 }
 
-export {addMovies, editMovies, deleteMovies};
+export {addMovies, editMovies, deleteMovies, listMovies};
