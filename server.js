@@ -7,6 +7,7 @@ import userRouter from './src/routes/user.routes.js';
 import adminRouter from './src/routes/admin.routes.js';
 import connectCloudinary from './src/config/cloudinary.js';
 import movieRouter from './src/routes/movie.routes.js';
+import reviewsRouter from './src/routes/reviews.routes.js';
 
 const app = express();
 const port = process.env.PORT;
@@ -19,6 +20,7 @@ app.use(express.json());
 app.use("/api/user", userRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/movies", movieRouter);
+app.use("/api/reviews", reviewsRouter);
 
 // Handle multer errors
 app.use((err, req, res, next) => {
