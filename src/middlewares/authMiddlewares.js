@@ -26,6 +26,8 @@ const auth = async (req, res, next) => {
                     name: user.name,
                     email: user.email,
                 }
+
+                next();
             });
         } else {
             return res.status(403).json({
