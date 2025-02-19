@@ -346,7 +346,13 @@ const listMovies = async (req, res) => {
             query.genre = genre;
         }
 
-        const movies = await Movie.find(query).skip(skip).limit(limitNum);
+        const movies = await Movie.find(query).skip(skip).limit(limitNum).populate({
+            path: "reviews",
+            populate: {
+                path: "user",
+                select: "name"
+            }
+        });
         if (!movies || movies.length === 0) {
             return res.status(404).json({
                 message: "No movies found"
@@ -370,8 +376,13 @@ const listMovies = async (req, res) => {
                     release_year: movie.release_year,
                     rating: movie.rating,
                     poster: movie.poster,
-                    reviews: movie.reviews,
-                    cloudinary_id: movie.cloudinary_id
+                    cloudinary_id: movie.cloudinary_id,
+                    reviews: movie.reviews.map(review => ({
+                        id: review._id,
+                        name: review.user?.name,
+                        rating: review.rating,
+                        comment: review.comment
+                    }))
                 }))
             }
         });
